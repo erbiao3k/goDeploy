@@ -38,7 +38,7 @@ func Deploying() {
 							log.Printf("post to webhook %v err: %v", app.DeployWebhook, err)
 							break
 						}
-						_, err = mongodb.MyApprovalManager.UpdateApprovalMany(bson.M{"deploy_status": DeployStatusWaitDeploy}, bson.M{"deploy_status": DeployStatusDeploying})
+						_, err = mongodb.MyApprovalManager.UpdateApprovalMany(bson.M{"app_name": app.AppName, "deploy_status": DeployStatusWaitDeploy}, bson.M{"deploy_status": DeployStatusDeploying})
 						if err != nil {
 							log.Printf("update status %v approval err: %v", DeployStatusWaitDeploy, err)
 							break
@@ -90,6 +90,6 @@ func Deploying() {
 				}
 			}
 		}
-		time.Sleep(time.Second * 30)
+		time.Sleep(time.Minute * 3)
 	}
 }
