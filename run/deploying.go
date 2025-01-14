@@ -15,12 +15,14 @@ func Deploying() {
 		WaitDeployList, err := mongodb.MyApprovalManager.GetApprovals(bson.M{"deploy_status": DeployStatusWaitDeploy})
 		if err != nil {
 			log.Printf("get commit approval err: %v\n", err)
+			time.Sleep(time.Minute)
 			continue
 		}
 
 		appList, err := mongodb.MyAppStackManager.ListAppStacks()
 		if err != nil {
 			log.Printf("get app list err: %v", err)
+			time.Sleep(time.Minute)
 			continue
 		}
 
@@ -36,12 +38,12 @@ func Deploying() {
 						err := postToWebhook(app.DeployWebhook, "")
 						if err != nil {
 							log.Printf("post to webhook %v err: %v", app.DeployWebhook, err)
-							break
+							continue
 						}
-						_, err = mongodb.MyApprovalManager.UpdateApprovalMany(bson.M{"app_name": app.AppName, "deploy_status": DeployStatusWaitDeploy}, bson.M{"deploy_status": DeployStatusDeploying})
+						_, err = mongodb.MyApprovalManager.UpdateApprovalMany(bson.M{"app_name": app.AppName, "deploy_status": DeployStatusWaitDeploy}, bson.M{"$set": bson.M{"deploy_status": DeployStatusDeploying}})
 						if err != nil {
 							log.Printf("update status %v approval err: %v", DeployStatusWaitDeploy, err)
-							break
+							continue
 						}
 					}
 				}
@@ -51,6 +53,7 @@ func Deploying() {
 		deployingApplist, err := mongodb.MyApprovalManager.GetApprovals(bson.M{"deploy_status": DeployStatusDeploying})
 		if err != nil {
 			log.Printf("get status Deploying approval err: %v\n", err)
+			time.Sleep(time.Minute)
 			continue
 		}
 
@@ -64,7 +67,7 @@ func Deploying() {
 			spNoApprovalList, err := mongodb.MyApprovalManager.GetApprovals(spNoFilter)
 			if err != nil {
 				log.Printf("get spNo %v approval err: %v", spNo, err)
-				break
+				continue
 			}
 			if len(spNoApprovalList) == len(approvals) {
 				var applist []string
@@ -79,14 +82,11 @@ func Deploying() {
 					"\n发布内容：" + approvals[0].DeployContent +
 					"\n发布应用：" + strings.Join(applist, ",") +
 					"\n应用地址：https://devops.aliyun.com/appstack/apps" +
-					"\n应用正在部署中!!!" +
-					"\n应用正在部署中!!!" +
-					"\n应用正在部署中!!!" +
 					"\n申请人：" + approvals[0].Applyer
-				data := fmt.Sprintf(`{"msgtype": "text", "text": {"content": "%s","mentioned_list":["%s"]}}`, msg, "@all")
+				data := fmt.Sprintf(`{"msgtype": "text", "text": {"content": "%s","mentioned_list":["@all"]}}`, msg)
 				err := p.Send(data)
 				if err != nil {
-					log.Println("post msg err: " + err.Error())
+					log.Printf("post msg err: %v", err)
 				}
 			}
 		}
